@@ -1,0 +1,153 @@
+/**
+ * candela-cline — Cline plugin for Candela LLM observability.
+ *
+ * Integrates Candela's cost tracking, budget enforcement, and session
+ * attribution into the Cline AI coding assistant.
+ *
+ * ## Integration Approach
+ *
+ * Cline supports Candela in two complementary ways:
+ *
+ * 1. **Provider config** (no plugin needed): Select "OpenAI Compatible"
+ *    in Cline settings and point Base URL at Candela's proxy.
+ *
+ * 2. **This plugin** (enhanced): Adds session tracking, cost output,
+ *    and budget warnings on top of the provider config.
+ *
+ * ## How Cline Plugins Work
+ *
+ * Cline's plugin system uses `@cline/sdk`. Plugins can:
+ * - Register custom providers via `registerHandler`
+ * - Add domain-specific tools
+ * - Hook into lifecycle events
+ *
+ * This plugin primarily focuses on lifecycle hooks for observability,
+ * since Candela's proxy already works as an OpenAI-compatible provider.
+ */
+
+import { CandelaClient } from "./candela-client.js";
+import { discoverCandelaUrl } from "./discover.js";
+
+/** Format USD with appropriate precision */
+function formatCost(usd: number): string {
+  if (usd < 0.01) return `$${usd.toFixed(4)}`;
+  if (usd < 1) return `$${usd.toFixed(3)}`;
+  return `$${usd.toFixed(2)}`;
+}
+
+/** Format token count with K/M suffixes */
+function formatTokens(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+  return String(count);
+}
+
+/**
+ * Candela plugin for Cline.
+ *
+ * Since Cline's plugin SDK is still evolving, this module exports
+ * both:
+ * - A plugin initializer for the `@cline/sdk` plugin system
+ * - Standalone utility functions that can be used from custom tools
+ *   or external scripts
+ */
+
+/** Standalone: Get a cost summary string for the current session */
+export async function getSessionSummary(
+  baseUrl = discoverCandelaUrl(),
+  hours = 1
+): Promise<string> {
+  const client = new CandelaClient(baseUrl);
+  const usage = await client.getUsageSummary(hours);
+  if (!usage || usage.requestCount === 0) {
+    return "No LLM usage recorded in the last hour.";
+  }
+
+  const breakdown = await client.getModelBreakdown(hours);
+  const modelLines = (breakdown ?? [])
+    .slice(0, 5)
+    .map(
+      (m) =>
+        `  ${m.model} (${m.provider}): ${formatTokens(m.totalTokens)} tokens, ${formatCost(m.totalCostUsd)}`
+    )
+    .join("\n");
+
+  return [
+    `📊 Candela Session Summary (last ${hours}h)`,
+    `   Tokens: ${formatTokens(usage.totalTokens)} (${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out)`,
+    `   Cost: ${formatCost(usage.totalCostUsd)}`,
+    `   Requests: ${usage.requestCount}`,
+    modelLines ? `\n   Model breakdown:\n${modelLines}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Standalone: Get budget status string */
+export async function getBudgetStatus(
+  baseUrl = discoverCandelaUrl()
+): Promise<string> {
+  const client = new CandelaClient(baseUrl);
+  const budget = await client.getBudgetRemaining();
+  if (!budget) {
+    return "Budget information unavailable (Candela may not be running or no budget is configured).";
+  }
+
+  const bar = "█".repeat(Math.floor(budget.percentUsed / 5)) +
+    "░".repeat(20 - Math.floor(budget.percentUsed / 5));
+
+  return [
+    `💰 Candela Budget Status`,
+    `   [${bar}] ${budget.percentUsed.toFixed(0)}%`,
+    `   Used: ${formatCost(budget.usedUsd)} of ${formatCost(budget.totalBudgetUsd)}`,
+    `   Remaining: ${formatCost(budget.remainingUsd)}`,
+    budget.percentUsed > 80
+      ? `   ⚠️ Budget is running low!`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Standalone: Check if Candela is alive */
+export async function checkCandelaHealth(
+  baseUrl = discoverCandelaUrl()
+): Promise<string> {
+  const client = new CandelaClient(baseUrl);
+  const alive = await client.isAlive();
+  if (alive) {
+    return `✅ Candela is running at ${baseUrl}`;
+  }
+  return `❌ Candela is not reachable at ${baseUrl}. Start it with: candela start`;
+}
+
+/**
+ * Cline plugin initializer.
+ *
+ * When Cline's plugin system stabilizes, this will register lifecycle
+ * hooks. For now, this module provides standalone functions that work
+ * as Cline custom tools or can be called from .cline/tools/.
+ */
+export async function initCandelaPlugin(options?: {
+  baseUrl?: string;
+}): Promise<{
+  client: CandelaClient;
+  alive: boolean;
+  summary: () => Promise<string>;
+  budget: () => Promise<string>;
+  health: () => Promise<string>;
+}> {
+  const baseUrl = options?.baseUrl ?? discoverCandelaUrl();
+  const client = new CandelaClient(baseUrl);
+  const alive = await client.isAlive();
+
+  return {
+    client,
+    alive,
+    summary: () => getSessionSummary(baseUrl),
+    budget: () => getBudgetStatus(baseUrl),
+    health: () => checkCandelaHealth(baseUrl),
+  };
+}
+
+export { CandelaClient } from "./candela-client.js";
