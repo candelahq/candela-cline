@@ -144,7 +144,14 @@ export class CandelaClient {
 
   /** Get the proxy URL for a given provider */
   getProxyUrl(
-    provider: "openai" | "anthropic" | "gemini-oai" | "google"
+    provider:
+      | "openai"
+      | "anthropic"
+      | "anthropic-vertex"
+      | "anthropic-direct"
+      | "anthropic-bedrock"
+      | "gemini-oai"
+      | "google"
   ): string {
     return `${this.baseUrl}/proxy/${provider}/v1`;
   }
