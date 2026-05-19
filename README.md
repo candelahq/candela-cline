@@ -99,7 +99,7 @@ Add these headers for session attribution in Cline's OpenAI-compatible provider 
 
 ## Prerequisites
 
-1. **Candela running locally** — `candela start` (requires [candela](https://github.com/candelahq/candela) v0.3.3+)
+1. **Candela running locally** — `candela start` (recommends [candela](https://github.com/candelahq/candela) v0.4.6+ for optimized performance; older versions supported via legacy fallback)
 2. **Authentication** — run `candela auth login` once to set up Google OAuth credentials (no `gcloud` CLI required)
 
 ---
