@@ -23,7 +23,9 @@ Every Cline request now routes through Candela with full observability.
 | Provider | Base URL |
 |----------|----------|
 | Anthropic (via Vertex AI) | `http://localhost:8181/proxy/anthropic/v1` |
+| Anthropic Vertex (native) | `http://localhost:8181/proxy/anthropic-vertex/v1` |
 | Anthropic Direct | `http://localhost:8181/proxy/anthropic-direct/v1` |
+| Anthropic (via AWS Bedrock) | `http://localhost:8181/proxy/anthropic-bedrock/v1` |
 | OpenAI | `http://localhost:8181/proxy/openai/v1` |
 | Gemini (OpenAI-compat) | `http://localhost:8181/proxy/gemini-oai/v1` |
 
