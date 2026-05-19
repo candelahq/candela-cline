@@ -26,6 +26,7 @@
  */
 
 import { CandelaClient } from "./candela-client.js";
+import type { BudgetInfo, GrantInfo } from "./candela-client.js";
 import { discoverCandelaUrl } from "./discover.js";
 
 /** Format USD with appropriate precision */
@@ -58,13 +59,13 @@ export async function getSessionSummary(
   hours = 1
 ): Promise<string> {
   const client = new CandelaClient(baseUrl);
-  const usage = await client.getUsageSummary(hours);
-  if (!usage || usage.requestCount === 0) {
+  const data = await client.getDashboardData(hours);
+  if (!data || data.usage.requestCount === 0) {
     return "No LLM usage recorded in the last hour.";
   }
 
-  const breakdown = await client.getModelBreakdown(hours);
-  const modelLines = (breakdown ?? [])
+  const usage = data.usage;
+  const modelLines = data.models
     .slice(0, 5)
     .map(
       (m) =>
@@ -72,41 +73,66 @@ export async function getSessionSummary(
     )
     .join("\n");
 
-  return [
+  const lines = [
     `📊 Candela Session Summary (last ${hours}h)`,
     `   Tokens: ${formatTokens(usage.totalTokens)} (${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out)`,
     `   Cost: ${formatCost(usage.totalCostUsd)}`,
     `   Requests: ${usage.requestCount}`,
     modelLines ? `\n   Model breakdown:\n${modelLines}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ];
+
+  // Budget footer
+  if (data.budget) {
+    const b = data.budget;
+    lines.push(
+      `\n   💰 Budget: ${formatCost(b.remainingUsd)} remaining of ${formatCost(b.limitUsd)} (${b.percentUsed.toFixed(0)}% used${b.resetLabel ? `, ${b.resetLabel}` : ""})`
+    );
+  }
+
+  return lines.filter(Boolean).join("\n");
 }
 
-/** Standalone: Get budget status string */
+/** Standalone: Get budget status string with grants */
 export async function getBudgetStatus(
   baseUrl = discoverCandelaUrl()
 ): Promise<string> {
   const client = new CandelaClient(baseUrl);
-  const budget = await client.getBudgetRemaining();
-  if (!budget) {
+  const data = await client.getDashboardData(24);
+  if (!data?.budget) {
     return "Budget information unavailable (Candela may not be running or no budget is configured).";
   }
 
-  const bar = "█".repeat(Math.floor(budget.percentUsed / 5)) +
-    "░".repeat(20 - Math.floor(budget.percentUsed / 5));
+  const b = data.budget;
+  const bar =
+    "█".repeat(Math.floor(b.percentUsed / 5)) +
+    "░".repeat(20 - Math.floor(b.percentUsed / 5));
 
-  return [
+  const lines = [
     `💰 Candela Budget Status`,
-    `   [${bar}] ${budget.percentUsed.toFixed(0)}%`,
-    `   Used: ${formatCost(budget.usedUsd)} of ${formatCost(budget.totalBudgetUsd)}`,
-    `   Remaining: ${formatCost(budget.remainingUsd)}`,
-    budget.percentUsed > 80
-      ? `   ⚠️ Budget is running low!`
-      : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+    `   Daily:  [${bar}] ${b.percentUsed.toFixed(0)}%  ${formatCost(b.spentUsd)} / ${formatCost(b.limitUsd)}${b.resetLabel ? ` (${b.resetLabel})` : ""}`,
+  ];
+
+  // Active grants
+  for (const g of data.activeGrants) {
+    if (g.isExhausted) continue;
+    const expiryNote = g.expiresAt
+      ? ` (expires ${g.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`
+      : "";
+    lines.push(
+      `   🎁 Grant: ${formatCost(g.remainingUsd)} / ${formatCost(g.amountUsd)} — ${g.reason || "Bonus"}${expiryNote}`
+    );
+  }
+
+  // Total
+  if (data.totalRemainingUsd !== null) {
+    lines.push(`   Total available: ${formatCost(data.totalRemainingUsd)}`);
+  }
+
+  if (b.isNearLimit) {
+    lines.push(`   ⚠️ Budget is running low!`);
+  }
+
+  return lines.join("\n");
 }
 
 /** Standalone: Check if Candela is alive */
