@@ -3,6 +3,7 @@
 Cline plugin for [Candela](https://github.com/candelahq/candela) — LLM cost tracking, session attribution, and budget enforcement for Cline users.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/candela-cline)](https://www.npmjs.com/package/candela-cline)
 
 ---
 
@@ -28,6 +29,16 @@ Every Cline request now routes through Candela with full observability.
 | Anthropic (via AWS Bedrock) | `http://localhost:8181/proxy/anthropic-bedrock/v1` |
 | OpenAI | `http://localhost:8181/proxy/openai/v1` |
 | Gemini (OpenAI-compat) | `http://localhost:8181/proxy/gemini-oai/v1` |
+
+---
+
+## Installation
+
+```bash
+npm install candela-cline
+```
+
+[➡️ View on npm](https://www.npmjs.com/package/candela-cline)
 
 ---
 
@@ -108,8 +119,8 @@ Add these headers for session attribution in Cline's OpenAI-compatible provider 
 
 - [Candela](https://github.com/candelahq/candela) — OTel-native LLM observability platform
 - [candela-desktop](https://github.com/candelahq/candela-desktop) — macOS desktop app
-- [opencode-candela](https://github.com/candelahq/opencode-candela) — OpenCode plugin
-- [candela-vscode](https://github.com/candelahq/candela-vscode) — VS Code extension
+- [opencode-candela](https://www.npmjs.com/package/opencode-candela) — OpenCode plugin
+- [candela-vscode](https://open-vsx.org/extension/candelahq/candela-vscode) — VS Code extension
 
 ---
 
