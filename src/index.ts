@@ -25,8 +25,8 @@
  * since Candela's proxy already works as an OpenAI-compatible provider.
  */
 
-import { CandelaClient } from "./candela-client.js";
 import type { BudgetInfo, GrantInfo } from "./candela-client.js";
+import { CandelaClient } from "./candela-client.js";
 import { discoverCandelaUrl } from "./discover.js";
 
 /** Format USD with appropriate precision */
@@ -56,7 +56,7 @@ function formatTokens(count: number): string {
 /** Standalone: Get a cost summary string for the current session */
 export async function getSessionSummary(
   baseUrl = discoverCandelaUrl(),
-  hours = 1
+  hours = 1,
 ): Promise<string> {
   const client = new CandelaClient(baseUrl);
   const data = await client.getDashboardData(hours);
@@ -69,7 +69,7 @@ export async function getSessionSummary(
     .slice(0, 5)
     .map(
       (m) =>
-        `  ${m.model} (${m.provider}): ${formatTokens(m.totalTokens)} tokens, ${formatCost(m.totalCostUsd)}`
+        `  ${m.model} (${m.provider}): ${formatTokens(m.totalTokens)} tokens, ${formatCost(m.totalCostUsd)}`,
     )
     .join("\n");
 
@@ -85,7 +85,7 @@ export async function getSessionSummary(
   if (data.budget) {
     const b = data.budget;
     lines.push(
-      `\n   💰 Budget: ${formatCost(b.remainingUsd)} remaining of ${formatCost(b.limitUsd)} (${b.percentUsed.toFixed(0)}% used${b.resetLabel ? `, ${b.resetLabel}` : ""})`
+      `\n   💰 Budget: ${formatCost(b.remainingUsd)} remaining of ${formatCost(b.limitUsd)} (${b.percentUsed.toFixed(0)}% used${b.resetLabel ? `, ${b.resetLabel}` : ""})`,
     );
   }
 
@@ -94,7 +94,7 @@ export async function getSessionSummary(
 
 /** Standalone: Get budget status string with grants */
 export async function getBudgetStatus(
-  baseUrl = discoverCandelaUrl()
+  baseUrl = discoverCandelaUrl(),
 ): Promise<string> {
   const client = new CandelaClient(baseUrl);
   const data = await client.getDashboardData(24);
@@ -119,7 +119,7 @@ export async function getBudgetStatus(
       ? ` (expires ${g.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`
       : "";
     lines.push(
-      `   🎁 Grant: ${formatCost(g.remainingUsd)} / ${formatCost(g.amountUsd)} — ${g.reason || "Bonus"}${expiryNote}`
+      `   🎁 Grant: ${formatCost(g.remainingUsd)} / ${formatCost(g.amountUsd)} — ${g.reason || "Bonus"}${expiryNote}`,
     );
   }
 
@@ -137,7 +137,7 @@ export async function getBudgetStatus(
 
 /** Standalone: Check if Candela is alive */
 export async function checkCandelaHealth(
-  baseUrl = discoverCandelaUrl()
+  baseUrl = discoverCandelaUrl(),
 ): Promise<string> {
   const client = new CandelaClient(baseUrl);
   const alive = await client.isAlive();
