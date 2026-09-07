@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "description": "Cline plugin for Candela — LLM cost tracking, session attribution, and budget enforcement",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit"
+  },
   "keywords": [
     "cline",
     "cline-plugin",
@@ -35,6 +40,6 @@
     "typescript": "^5.8.0"
   },
   "files": [
-    "src/"
+    "dist/"
   ]
 }
